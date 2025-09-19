@@ -1,22 +1,59 @@
 import { verifyWebhook } from '@clerk/nextjs/webhooks'
+import { createOrUpdateUser, deleteUser } from '@/lib/actions/user';
+import { clerkClient } from '@clerk/nextjs/server';
 
 export async function POST(req) {
   try {
     const evt = await verifyWebhook(req)
 
-    const id = evt.data.id
-    const eventType = evt.type
+    const id = evt?.data.id
+    const eventType = evt?.type
 
-    console.log(`✅ Webhook ${id} received: ${eventType}`)
-    console.log('📦 Payload:', evt.data)
+    console.log(`Webhook ${id} received: ${eventType}`)
+    console.log('Payload:', evt.data)
 
-    if (eventType === "user.created") console.log("User created")
-    if (eventType === "user.updated") console.log("User updated")
-    if (eventType === "user.deleted") console.log("User deleted")
-
+    if (eventType === 'user.created' || eventType === 'user.updated') {
+      const { first_name, last_name, image_url, email_addresses } = evt?.data;
+      try {
+        const user = await createOrUpdateUser(
+          id,
+          first_name,
+          last_name,
+          image_url,
+          email_addresses
+        );
+        if (user && eventType === 'user.created') {
+          try {
+            const client = await clerkClient();
+            await client.users.updateUserMetadata(id, {
+              publicMetadata: {
+                userMongoId: user._id,
+              },
+            });
+          } catch (error) {
+            console.log('Error: Could not update user metadata:', error);
+          }
+        }
+      } catch (error) {
+        console.log('Error: Could not create or update user:', error);
+        return new Response('Error: Could not create or update user', {
+          status: 400,
+        });
+      }
+    }
+    if (eventType === 'user.deleted') {
+      try {
+        await deleteUser(id);
+      } catch (error) {
+        console.log('Error: Could not delete user:', error);
+        return new Response('Error: Could not delete user', {
+          status: 400,
+        });
+      }
+    }
     return new Response('Webhook received', { status: 200 })
   } catch (err) {
-    console.error('❌ Error verifying webhook:', err)
+    console.error('Error verifying webhook:', err)
     return new Response('Error verifying webhook', { status: 400 })
   }
 }

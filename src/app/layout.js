@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import ThemeProviderWrapper from '@/components/ThemeProviderWrapper';
 import { ClerkProvider } from '@clerk/nextjs';
 import Navbar from '@/components/NavBar';
+import SearchBox from '@/components/SearchBox';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
@@ -22,6 +23,7 @@ export default function RootLayout({ children }) {
           <ThemeProviderWrapper>
             <Header />
             <Navbar/>
+            <SearchBox/>
             {children}
           </ThemeProviderWrapper>
         </body>
